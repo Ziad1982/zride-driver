@@ -30,39 +30,9 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Harlow+Solid+Italic&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Harlow+Solid+Italic&amp;display=swap">
     
     <style>
-
-
-// PWA Installation
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    // Show install button in header
-    const installBtn = document.createElement('div');
-    installBtn.id = 'installAppBtn';
-    installBtn.innerHTML = '<i class="fas fa-download"></i>';
-    installBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#f97316;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:1000;box-shadow:0 4px 15px rgba(0,0,0,0.3);cursor:pointer;';
-    installBtn.onclick = () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            deferredPrompt.userChoice.then(() => {
-                deferredPrompt = null;
-                installBtn.remove();
-            });
-        } else {
-            alert('📱 To install: Tap Share → Add to Home Screen (Safari) or Menu → Install App (Chrome)');
-        }
-    };
-    document.body.appendChild(installBtn);
-});
-
-// Check if already installed
-if (window.matchMedia('(display-mode: standalone)').matches) {
-    document.getElementById('installAppBtn')?.remove();
-}
         /* ===== RESET & VARIABLES ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         
@@ -102,6 +72,26 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         .zride-logo { display: flex; align-items: center; justify-content: center; gap: 2px; position: relative; margin-bottom: 0.5rem; }
         .z-text { font-family: 'Harlow Solid Italic', 'Palatino Linotype', 'Book Antiqua', serif; font-size: 3.2rem; font-weight: 600; background: linear-gradient(145deg, #f97316, #ff9f43, #f97316); -webkit-background-clip: text; background-clip: text; color: transparent; font-style: italic; }
         .ride-text { font-family: 'Arial Black', 'Poppins', 'Segoe UI', sans-serif; font-size: 3rem; font-weight: 900; background: linear-gradient(145deg, #f97316, #eab308, #f39c12, #e67e22); -webkit-background-clip: text; background-clip: text; color: transparent; display: inline-block; }
+        
+        /* Install Button */
+        .install-app-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            border-radius: 30px;
+            padding: 8px 15px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+        .install-app-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 15px rgba(16,185,129,0.4);
+        }
         
         /* Premium Cards */
         .trip-card { 
@@ -303,6 +293,7 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         }
         @keyframes alertPulse { 0%,100% { transform: scale(1); box-shadow: 0 0 20px rgba(249,115,22,0.3); } 50% { transform: scale(1.02); box-shadow: 0 0 40px rgba(249,115,22,0.6); } }
         .alert-timer { font-size: 3rem; font-weight: 900; margin: 1rem 0; background: rgba(0,0,0,0.3); border-radius: 60px; padding: 0.5rem; border: 2px solid #f97316; color: #f97316; }
+        .alert-distance-value { font-size: 2.5rem; font-weight: 900; color: #f97316; margin: 0.5rem 0; }
         
         /* Fare Display */
         .fare-display { 
@@ -456,11 +447,47 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         .trip-detail-item { margin-bottom: 12px; padding: 8px 12px; background: rgba(0,0,0,0.3); border-radius: 16px; }
         .trip-detail-item label { font-size: 0.7rem; opacity: 0.7; display: block; margin-bottom: 4px; }
         .trip-detail-item .value { font-size: 0.9rem; font-weight: bold; word-break: break-word; }
+        
+        /* New styles for better trip display */
+        .trip-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .trip-info-cell {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 10px;
+        }
+        .trip-info-cell label {
+            font-size: 0.65rem;
+            opacity: 0.6;
+            display: block;
+            margin-bottom: 5px;
+        }
+        .trip-info-cell .value {
+            font-size: 0.85rem;
+            font-weight: bold;
+            word-break: break-word;
+        }
+        .distance-badge {
+            background: #f97316;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
-    <!-- Hidden Audio Elements -->
-    <audio id="birdSound" preload="auto" style="display: none;"><source src="https://www.soundjay.com/misc/sounds/bird-01.mp3" type="audio/mpeg"></audio>
+    <!-- Hidden Audio Elements for Bird Sounds -->
+    <audio id="birdSound1" preload="auto" style="display: none;"><source src="https://www.soundjay.com/nature/sounds/bird-song-1.mp3" type="audio/mpeg"></audio>
+    <audio id="birdSound2" preload="auto" style="display: none;"><source src="https://www.soundjay.com/nature/sounds/bird-song-2.mp3" type="audio/mpeg"></audio>
+    <audio id="birdSound3" preload="auto" style="display: none;"><source src="https://www.soundjay.com/nature/sounds/bird-chirp-1.mp3" type="audio/mpeg"></audio>
+    <audio id="loudAlert" preload="auto" style="display: none;"><source src="https://www.soundjay.com/misc/sounds/alarm-clock-1.mp3" type="audio/mpeg"></audio>
     <audio id="meterSound" preload="auto" style="display: none;"><source src="https://www.soundjay.com/misc/sounds/beep-01a.mp3" type="audio/mpeg"></audio>
     <audio id="waitingSound" preload="auto" style="display: none;"><source src="https://www.soundjay.com/misc/sounds/timer-beep.mp3" type="audio/mpeg"></audio>
     <audio id="notificationSound" preload="auto" style="display: none;"><source src="https://www.soundjay.com/misc/sounds/bell-ringing-01.mp3" type="audio/mpeg"></audio>
@@ -489,6 +516,7 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
             <div class="connection-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; padding: 0 1rem;">
                 <div class="connection-status" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.3rem 0.8rem; border-radius: 30px;"><div class="connection-dot" id="connectionDot"></div><span>Dispatch</span></div>
                 <div class="refresh-btn" onclick="refreshConnection()" style="background: rgba(255,255,255,0.1); width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;"><i class="fas fa-sync-alt"></i></div>
+                <button class="install-app-btn" onclick="installApp()" id="installBtn"><i class="fas fa-download"></i> Install</button>
                 <div class="driver-badge" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(0,0,0,0.3); padding: 0.3rem 0.8rem; border-radius: 30px;"><i class="fas fa-user"></i><span id="driverNameSmall">Driver</span></div>
             </div>
             <div class="driver-info-row" style="display: flex; justify-content: space-between; align-items: center; padding: 0 1rem;">
@@ -518,7 +546,7 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         </div>
 
         <div class="status-bar"><span><i class="fas fa-clock"></i> <span id="currentTime"></span></span><span class="earnings" id="earningsDisplay">$0.00</span></div>
-        <div id="adBanner" class="ad-banner"><i class="fas fa-ad"></i><div class="marquee"><span id="adText">Welcome to ZRide Dispatch - Safe & Reliable Rides</span></div></div>
+        <div id="adBanner" class="ad-banner"><i class="fas fa-ad"></i><div class="marquee"><span id="adText">Welcome to ZRide Dispatch - Safe &amp; Reliable Rides</span></div></div>
         <div id="speedIndicator" class="speed-indicator" data-speed="" onclick="toggleSpeedAlert()"><i class="fas fa-tachometer-alt"></i></div>
 
         <div class="main-content" style="padding: 0 1rem 1rem;">
@@ -541,19 +569,50 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
                     <div class="stat-mini"><div class="stat-mini-value" id="onlineTime">8h</div><div class="stat-mini-label">ONLINE</div></div>
                 </div>
 
-                <!-- Active Trip Card -->
+                <!-- Active Trip Card - Enhanced Display -->
                 <div id="activeTripCard" class="trip-card hidden">
-                    <div class="trip-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;"><h3>ACTIVE TRIP</h3><span class="trip-stage" id="tripStage" style="background: #f97316; padding: 0.4rem 1.2rem; border-radius: 30px; font-size: 0.9rem; font-weight: bold;">EN ROUTE</span></div>
+                    <div class="trip-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem;">
+                        <h3><i class="fas fa-taxi" style="color: #f97316;"></i> ACTIVE TRIP</h3>
+                        <span class="trip-stage" id="tripStage" style="background: #f97316; padding: 0.4rem 1.2rem; border-radius: 30px; font-size: 0.9rem; font-weight: bold;">EN ROUTE</span>
+                    </div>
                     
-                    <div class="trip-detail-item"><label>Customer Name</label><div class="value" id="tripCustomer">-</div></div>
-                    <div class="trip-detail-item"><label>Customer Phone</label><div class="value" id="tripCustomerPhone">-</div></div>
-                    <div class="trip-detail-item"><label>Pickup Address</label><div class="value" id="tripPickup">-</div></div>
-                    <div class="trip-detail-item"><label>Destination</label><div class="value" id="tripDestination">-</div></div>
-                    <div class="trip-detail-item" id="scheduledTimeContainer" style="display: none;"><label>Scheduled Time</label><div class="value" id="tripScheduledTime">-</div></div>
-                    <div class="trip-detail-item" id="accountTypeContainer" style="display: none;"><label>Account Type</label><div class="value" id="tripAccountType">-</div></div>
-                    <div class="trip-detail-item" id="notesContainer" style="display: none;"><label>Notes</label><div class="value" id="tripNotes">-</div></div>
+                    <div class="trip-info-grid">
+                        <div class="trip-info-cell">
+                            <label><i class="fas fa-user"></i> Customer Name</label>
+                            <div class="value" id="tripCustomer">-</div>
+                        </div>
+                        <div class="trip-info-cell">
+                            <label><i class="fas fa-phone"></i> Phone</label>
+                            <div class="value" id="tripCustomerPhone">-</div>
+                        </div>
+                        <div class="trip-info-cell">
+                            <label><i class="fas fa-map-marker-alt"></i> Pickup Address</label>
+                            <div class="value" id="tripPickup">-</div>
+                        </div>
+                        <div class="trip-info-cell">
+                            <label><i class="fas fa-flag-checkered"></i> Destination</label>
+                            <div class="value" id="tripDestination">-</div>
+                        </div>
+                        <div class="trip-info-cell" id="scheduledTimeContainer" style="display: none;">
+                            <label><i class="fas fa-calendar-alt"></i> Scheduled Time</label>
+                            <div class="value" id="tripScheduledTime">-</div>
+                        </div>
+                        <div class="trip-info-cell" id="accountTypeContainer" style="display: none;">
+                            <label><i class="fas fa-star"></i> Account Type</label>
+                            <div class="value" id="tripAccountType">-</div>
+                        </div>
+                    </div>
                     
-                    <div class="trip-row" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0;"><i class="fas fa-dollar-sign" style="color: #f97316;"></i><span id="tripFare">$0.00</span></div>
+                    <div id="notesContainer" style="display: none;" class="trip-info-cell" style="width: 100%;">
+                        <label><i class="fas fa-sticky-note"></i> Notes</label>
+                        <div class="value" id="tripNotes">-</div>
+                    </div>
+                    
+                    <div class="trip-row" style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0; background: rgba(249,115,22,0.1); border-radius: 16px; margin: 10px 0; padding: 12px;">
+                        <i class="fas fa-dollar-sign" style="color: #f97316; font-size: 1.2rem;"></i>
+                        <span id="tripFare" style="font-size: 1.3rem; font-weight: bold;">$0.00</span>
+                        <span id="tripDistanceDisplay" style="font-size: 0.8rem; opacity: 0.7;"></span>
+                    </div>
 
                     <div class="trip-actions">
                         <button class="btn btn-warning" onclick="arriveAtPickup()" id="arriveBtn">ARRIVE</button>
@@ -598,7 +657,22 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
             </div>
 
             <!-- MAP PAGE -->
-            <div id="mapPage" class="page"><h3 style="margin-bottom: 1rem;">GPS NAVIGATION</h3><div id="tripDestinationInfo" class="destination-info hidden" style="background: rgba(0,0,0,0.3); border-radius: 20px; padding: 1rem; margin-bottom: 1rem;"><p><i class="fas fa-map-marker-alt" style="color: #10b981;"></i> <strong>Pickup:</strong> <span id="navPickup"></span></p><p><i class="fas fa-flag-checkered" style="color: #ef4444;"></i> <strong>Destination:</strong> <span id="navDestination"></span></p></div><div class="gps-buttons"><div class="gps-btn waze" onclick="openWaze()"><i class="fab fa-waze" style="font-size: 2rem; color: #33ccff;"></i><span>WAZE</span></div><div class="gps-btn apple" onclick="openAppleMaps()"><i class="fab fa-apple" style="font-size: 2rem; color: white;"></i><span>APPLE</span></div><div class="gps-btn google" onclick="openGoogleMaps()"><i class="fab fa-google" style="font-size: 2rem; color: #34a853;"></i><span>GOOGLE</span></div></div></div>
+            <div id="mapPage" class="page">
+                <h3 style="margin-bottom: 1rem;">GPS NAVIGATION</h3>
+                <div id="tripDestinationInfo" class="destination-info hidden" style="background: rgba(0,0,0,0.3); border-radius: 20px; padding: 1rem; margin-bottom: 1rem;">
+                    <p><i class="fas fa-map-marker-alt" style="color: #10b981;"></i> <strong>Pickup:</strong> <span id="navPickup"></span></p>
+                    <p><i class="fas fa-flag-checkered" style="color: #ef4444;"></i> <strong>Destination:</strong> <span id="navDestination"></span></p>
+                    <div id="pickupDistanceDisplay" style="margin-top: 10px; text-align: center;"></div>
+                </div>
+                <div class="gps-buttons">
+                    <div class="gps-btn waze" onclick="openWaze()"><i class="fab fa-waze" style="font-size: 2rem; color: #33ccff;"></i><span>WAZE</span></div>
+                    <div class="gps-btn apple" onclick="openAppleMaps()"><i class="fab fa-apple" style="font-size: 2rem; color: white;"></i><span>APPLE</span></div>
+                    <div class="gps-btn google" onclick="openGoogleMaps()"><i class="fab fa-google" style="font-size: 2rem; color: #34a853;"></i><span>GOOGLE</span></div>
+                </div>
+                <div class="gps-btn" onclick="navigateToPickup()" style="background: linear-gradient(135deg, #f97316, #ea580c); margin-top: 10px;">
+                    <i class="fas fa-directions"></i> Navigate to Pickup
+                </div>
+            </div>
 
             <!-- SAFETY PAGE -->
             <div id="safetyPage" class="page"><div class="safety-grid"><div class="safety-btn emergency" onclick="emergencyCall()"><i class="fas fa-phone-alt" style="font-size: 2rem; color: #ef4444;"></i><h4>EMERGENCY</h4></div><div class="safety-btn" onclick="shareLocation()"><i class="fas fa-location-arrow" style="font-size: 2rem; color: #f97316;"></i><h4>SHARE</h4></div><div class="safety-btn panic" onclick="triggerPanic()"><i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #ef4444;"></i><h4>PANIC</h4></div><div class="safety-btn" onclick="showSafetyTips()"><i class="fas fa-shield-alt" style="font-size: 2rem; color: #10b981;"></i><h4>TIPS</h4></div></div></div>
@@ -609,7 +683,23 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
     </div>
 
     <!-- MODALS -->
-    <div id="jobAlert" class="job-alert hidden"><div class="alert-content"><div class="bird-icon"><i class="fas fa-dove" style="font-size: 4rem;"></i></div><h2 style="color: white; font-size: 2rem; margin-bottom: 0.5rem;">NEW JOB!</h2><div class="alert-distance" id="alertDistance" style="font-size: 1.5rem; font-weight: bold;">2.3</div><div class="alert-label">miles away</div><div class="alert-timer" id="alertTimer">30</div><div class="alert-actions" style="display: flex; gap: 1rem; margin-top: 1rem;"><button class="btn btn-success" onclick="acceptJob()" style="flex: 1;">ACCEPT</button><button class="btn btn-danger" onclick="declineJob()" style="flex: 1;">DECLINE</button></div></div></div>
+    <div id="jobAlert" class="job-alert hidden">
+        <div class="alert-content">
+            <div class="bird-icon"><i class="fas fa-dove" style="font-size: 4rem; animation: flyIn 0.5s ease;"></i></div>
+            <h2 style="color: white; font-size: 2rem; margin-bottom: 0.5rem;">NEW RIDE REQUEST!</h2>
+            <div class="alert-distance">
+                <div style="font-size: 0.9rem; opacity: 0.8;">Distance to pickup</div>
+                <div class="alert-distance-value" id="alertDistance">2.3</div>
+                <div style="font-size: 0.9rem;">miles away</div>
+            </div>
+            <div id="alertPickupAddress" style="font-size: 0.8rem; margin: 10px 0; opacity: 0.8;"></div>
+            <div class="alert-timer" id="alertTimer">30</div>
+            <div class="alert-actions" style="display: flex; gap: 1rem; margin-top: 1rem;">
+                <button class="btn btn-success" onclick="acceptJob()" style="flex: 1;"><i class="fas fa-check"></i> ACCEPT</button>
+                <button class="btn btn-danger" onclick="declineJob()" style="flex: 1;"><i class="fas fa-times"></i> DECLINE</button>
+            </div>
+        </div>
+    </div>
     <div id="cancelRequestModal" class="modal hidden"><div class="modal-content"><h3>CANCEL REQUEST</h3><p>Your cancel request has been sent to dispatch. Please wait for approval.</p><button class="btn btn-primary" onclick="closeModal('cancelRequestModal')">OK</button></div></div>
     <div id="paymentNotAvailableModal" class="modal hidden"><div class="modal-content"><i class="fas fa-credit-card" style="font-size: 3rem; color: #f59e0b; margin-bottom: 1rem; text-align: center; display: block;"></i><h3 style="text-align: center; color: #f59e0b;">Payment Not Available</h3><p style="text-align: center; margin: 1rem 0;">Payment processing is currently under development. Please check back later.</p><div class="modal-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button class="btn btn-primary" onclick="closeModal('paymentNotAvailableModal')">OK</button></div></div></div>
     <div id="connectionModal" class="modal hidden"><div class="modal-content"><h3>CONNECTION STATUS</h3><p id="connectionStatus">Connected to ZRide Dispatch</p><div class="modal-actions" style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button class="btn btn-primary" onclick="reconnect()">RECONNECT</button><button class="btn btn-danger" onclick="closeModal('connectionModal')">CLOSE</button></div></div></div>
@@ -651,10 +741,11 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         let audioContext = null;
         let autoPriceCalculation = true;
         let jobTimer = null;
+        let currentDistanceToPickup = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
 
         // Audio elements
-        let birdAudio;
+        let birdAudio1, birdAudio2, birdAudio3, loudAlertAudio;
         let meterAudio;
         let waitingAudio;
         let notificationAudio;
@@ -682,6 +773,37 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         };
 
         // =============================================
+        // INSTALL APP FUNCTION - Save to Home Screen
+        // =============================================
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBtn').style.display = 'flex';
+        });
+        
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted install prompt');
+                        addNotification('App installed to home screen!');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                // Fallback: Show instructions for iOS
+                if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+                    alert('To install on iOS:\n1. Tap the Share button (box with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" in the top right');
+                } else {
+                    alert('Tap the menu button (3 dots) in your browser and select "Add to Home Screen" or "Install App"');
+                }
+            }
+        }
+
+        // =============================================
         // REVERSE GEOCODING
         // =============================================
         async function getAddressFromCoords(lat, lng) {
@@ -699,116 +821,181 @@ if (window.matchMedia('(display-mode: standalone)').matches) {
         }
 
         // =============================================
-        // ENHANCED AUDIO
+        // ENHANCED AUDIO - LOUD BIRD SOUNDS
         // =============================================
-        const AUDIO_URLS = {
-            bird: 'https://www.soundjay.com/misc/sounds/bell-ringing-01.mp3',
-            meter: 'https://www.soundjay.com/misc/sounds/beep-01a.mp3',
-            waiting: 'https://www.soundjay.com/misc/sounds/timer-beep.mp3',
-            notification: 'https://www.soundjay.com/misc/sounds/bell-ringing-02.mp3',
-            panic: 'https://www.soundjay.com/misc/sounds/bell-ringing-05.mp3',
-            message: 'https://www.soundjay.com/misc/sounds/notification-2.mp3'
-        };
-
+        const BIRD_SOUND_URLS = [
+            'https://www.soundjay.com/nature/sounds/bird-song-1.mp3',
+            'https://www.soundjay.com/nature/sounds/bird-song-2.mp3',
+            'https://www.soundjay.com/nature/sounds/bird-chirp-1.mp3',
+            'https://www.soundjay.com/nature/sounds/robin-bird-song-1.mp3',
+            'https://www.soundjay.com/nature/sounds/cardinal-bird-song-1.mp3'
+        ];
+        
         function initAudio() {
             console.log('🔊 Initializing audio...');
             
-            birdAudio = new Audio();
-            meterAudio = new Audio();
-            waitingAudio = new Audio();
-            notificationAudio = new Audio();
-            panicAudio = new Audio();
-            messageAudio = new Audio();
+            birdAudio1 = document.getElementById('birdSound1');
+            birdAudio2 = document.getElementById('birdSound2');
+            birdAudio3 = document.getElementById('birdSound3');
+            loudAlertAudio = document.getElementById('loudAlert');
+            meterAudio = document.getElementById('meterSound');
+            waitingAudio = document.getElementById('waitingSound');
+            notificationAudio = document.getElementById('notificationSound');
+            panicAudio = document.getElementById('panicSound');
+            messageAudio = document.getElementById('messageSound');
             
-            birdAudio.volume = 1.0;
-            meterAudio.volume = 0.8;
-            waitingAudio.volume = 0.7;
-            notificationAudio.volume = 0.8;
-            panicAudio.volume = 1.0;
-            messageAudio.volume = 0.8;
-            
-            const preloadAudio = (audio, url) => {
-                audio.preload = 'auto';
-                audio.src = url;
-                audio.load();
-            };
-            
-            preloadAudio(birdAudio, AUDIO_URLS.bird);
-            preloadAudio(meterAudio, AUDIO_URLS.meter);
-            preloadAudio(waitingAudio, AUDIO_URLS.waiting);
-            preloadAudio(notificationAudio, AUDIO_URLS.notification);
-            preloadAudio(panicAudio, AUDIO_URLS.panic);
-            preloadAudio(messageAudio, AUDIO_URLS.message);
+            // Set volumes to maximum for loud alert
+            const allAudios = [birdAudio1, birdAudio2, birdAudio3, loudAlertAudio, meterAudio, waitingAudio, notificationAudio, panicAudio, messageAudio];
+            allAudios.forEach(audio => {
+                if (audio) {
+                    audio.volume = 1.0;
+                    audio.preload = 'auto';
+                    audio.load();
+                }
+            });
             
             const enableAudio = function() {
                 console.log('🎵 Enabling audio on user interaction');
-                const testAudio = new Audio();
-                testAudio.volume = 0;
-                testAudio.play().then(() => {
-                    console.log('✅ Audio context unlocked');
-                    testAudio.pause();
-                    testAudio.currentTime = 0;
-                    birdAudio.play().then(() => {
-                        birdAudio.pause();
-                        birdAudio.currentTime = 0;
-                    }).catch(e => console.log('Bird preload:', e));
-                }).catch(e => console.log('Audio unlock attempt:', e));
-                
+                allAudios.forEach(audio => {
+                    if (audio) {
+                        audio.play().catch(() => {}).then(() => {
+                            audio.pause();
+                            audio.currentTime = 0;
+                        });
+                    }
+                });
                 document.removeEventListener('touchstart', enableAudio);
                 document.removeEventListener('click', enableAudio);
-                document.removeEventListener('touchend', enableAudio);
             };
             
             document.addEventListener('touchstart', enableAudio, { once: true });
             document.addEventListener('click', enableAudio, { once: true });
-            document.addEventListener('touchend', enableAudio, { once: true });
-            
-            setTimeout(() => {
-                const dummyAudio = new Audio();
-                dummyAudio.volume = 0;
-                dummyAudio.play().catch(() => {});
-            }, 100);
         }
 
+        function playLoudBirdSound() {
+            console.log('🐦 Playing LOUD bird sound alert');
+            
+            // Multiple bird sounds for emphasis
+            const sounds = [birdAudio1, birdAudio2, birdAudio3, loudAlertAudio];
+            const randomSound = sounds[Math.floor(Math.random() * sounds.length)];
+            
+            if (randomSound) {
+                randomSound.currentTime = 0;
+                randomSound.volume = 1.0;
+                randomSound.play().catch(e => console.log('Audio play error:', e));
+                
+                // Play a second sound for redundancy
+                setTimeout(() => {
+                    const anotherSound = sounds[Math.floor(Math.random() * sounds.length)];
+                    if (anotherSound && anotherSound !== randomSound) {
+                        anotherSound.currentTime = 0;
+                        anotherSound.volume = 0.8;
+                        anotherSound.play().catch(() => {});
+                    }
+                }, 200);
+            }
+            
+            // Visual flying bird animation
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => {
+                    const bird = document.createElement('div');
+                    bird.innerHTML = i % 2 === 0 ? '🐦' : '🐧';
+                    bird.style.cssText = `position:fixed;top:${20 + i * 15}%;left:${30 + i * 20}%;font-size:${3 + i}rem;z-index:10001;animation:flyAway 1s ease-out forwards;`;
+                    if (!document.querySelector('#flyAnimation')) {
+                        const style = document.createElement('style');
+                        style.textContent = '@keyframes flyAway{0%{opacity:1;transform:translate(0,0);}100%{opacity:0;transform:translate(100vw,-100vh);}}';
+                        document.head.appendChild(style);
+                    }
+                    document.body.appendChild(bird);
+                    setTimeout(() => bird.remove(), 1000);
+                }, i * 150);
+            }
+            
+            if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+            
+            if (Notification.permission === 'granted') {
+                new Notification('🚕 New Ride Request!', {
+                    body: 'A new passenger needs a ride - Check now!',
+                    icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23e67e22\'/%3E%3Ctext x=\'50\' y=\'70\' text-anchor=\'middle\' fill=\'white\' font-size=\'50\'%3E🚕%3C/text%3E%3C/svg%3E'
+                });
+            }
+        }
 
-function playBirdSound() {
-    console.log('🐦 Playing bird sound');
-    
-    // Visual flying bird animation
-    const bird = document.createElement('div');
-    bird.innerHTML = '🐦';
-    bird.style.cssText = 'position:fixed;top:20%;left:50%;transform:translate(-50%,-50%);font-size:5rem;z-index:10001;animation:flyAway 1s ease-out forwards;';
-    if (!document.querySelector('#flyAnimation')) {
-        const style = document.createElement('style');
-        style.textContent = '@keyframes flyAway{0%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;transform:translate(100%,-200%) scale(2);}}';
-        document.head.appendChild(style);
-    }
-    document.body.appendChild(bird);
-    setTimeout(() => bird.remove(), 1000);
-    
-    // Strong vibration
-    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
-    
-    // LOUD bird sound
-    if (birdAudio) {
-        birdAudio.currentTime = 0;
-        birdAudio.volume = 1.0;
-        birdAudio.play().catch(e => console.log('Audio error:', e));
-    }
-    
-    // Also play a backup beep for extra alert
-    const beep = new Audio();
-    beep.src = 'https://www.soundjay.com/misc/sounds/beep-07.mp3';
-    beep.volume = 0.8;
-    beep.play().catch(() => {});
-    
-    if (Notification.permission === 'granted') {
-        new Notification('🚕 New Job Available!', {
-            body: `${currentJobAlert?.distance || 'A new'} mile trip is waiting for you`,
-            icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23e67e22\'/%3E%3Ctext x=\'50\' y=\'70\' text-anchor=\'middle\' fill=\'white\' font-size=\'50\'%3E🚕%3C/text%3E%3C/svg%3E'
-        });
-    }
-}
+        function playMeterSound() {
+            if (meterAudio) {
+                meterAudio.currentTime = 0;
+                meterAudio.play().catch(() => {});
+            }
+        }
+
+        function playWaitingSound() {
+            if (waitingAudio) {
+                waitingAudio.currentTime = 0;
+                waitingAudio.play().catch(() => {});
+            }
+        }
+
+        // =============================================
+        // AUTO NAVIGATION TO PICKUP
+        // =============================================
+        function navigateToPickup() {
+            if (!activeTrip || !activeTrip.pickup) {
+                alert('No active trip or pickup location available');
+                return;
+            }
+            
+            const pickupAddress = encodeURIComponent(activeTrip.pickup + ', Nashville, TN');
+            
+            // Try to open Google Maps directly (best for auto-rerouting)
+            const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${pickupAddress}&travelmode=driving`;
+            
+            // Also open in new window for devices that support it
+            window.open(googleMapsUrl, '_blank');
+            
+            addNotification(`Navigating to pickup: ${activeTrip.pickup}`);
+        }
+        
+        function openGoogleMaps() {
+            if (!activeTrip && !currentJobAlert) {
+                alert('No active trip');
+                return;
+            }
+            const destination = activeTrip ? (activeTrip.stage === 'started' ? activeTrip.destination : activeTrip.pickup) : (currentJobAlert ? currentJobAlert.pickup : null);
+            if (!destination) {
+                alert('No destination available');
+                return;
+            }
+            const dest = encodeURIComponent(destination + ', Nashville, TN');
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, '_blank');
+        }
+        
+        function openWaze() {
+            if (!activeTrip && !currentJobAlert) {
+                alert('No active trip');
+                return;
+            }
+            const destination = activeTrip ? (activeTrip.stage === 'started' ? activeTrip.destination : activeTrip.pickup) : (currentJobAlert ? currentJobAlert.pickup : null);
+            if (!destination) {
+                alert('No destination available');
+                return;
+            }
+            const dest = encodeURIComponent(destination + ', Nashville, TN');
+            window.open(`https://waze.com/ul?q=${dest}&navigate=yes`, '_blank');
+        }
+        
+        function openAppleMaps() {
+            if (!activeTrip && !currentJobAlert) {
+                alert('No active trip');
+                return;
+            }
+            const destination = activeTrip ? (activeTrip.stage === 'started' ? activeTrip.destination : activeTrip.pickup) : (currentJobAlert ? currentJobAlert.pickup : null);
+            if (!destination) {
+                alert('No destination available');
+                return;
+            }
+            const dest = encodeURIComponent(destination + ', Nashville, TN');
+            window.open(`https://maps.apple.com/?daddr=${dest}&dirflg=d`, '_blank');
+        }
 
         // =============================================
         // ADD ACTIVITY FUNCTION
@@ -947,27 +1134,13 @@ function playBirdSound() {
             console.log('ZRide Driver App starting...');
             initAudio();
             
-            birdAudio = document.getElementById('birdSound');
-            meterAudio = document.getElementById('meterSound');
-            waitingAudio = document.getElementById('waitingSound');
-            notificationAudio = document.getElementById('notificationSound');
-            panicAudio = document.getElementById('panicSound');
-            messageAudio = document.getElementById('messageSound');
-            
-            [birdAudio, meterAudio, waitingAudio, notificationAudio, panicAudio, messageAudio].forEach(audio => {
-                if (audio) {
-                    audio.load();
-                    audio.volume = 1.0;
-                }
-            });
-            
             if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
                 Notification.requestPermission();
             }
             
             const enableAudio = function() {
                 console.log('User interaction - enabling audio');
-                [birdAudio, meterAudio, waitingAudio, notificationAudio, panicAudio, messageAudio].forEach(audio => {
+                [birdAudio1, birdAudio2, birdAudio3, loudAlertAudio, meterAudio, waitingAudio, notificationAudio, panicAudio, messageAudio].forEach(audio => {
                     if (audio) {
                         audio.play().catch(() => {}).then(() => {
                             audio.pause();
@@ -982,7 +1155,14 @@ function playBirdSound() {
             document.addEventListener('touchstart', enableAudio, { once: true });
             document.addEventListener('click', enableAudio, { once: true });
             
-            checkSavedSession();
+            // Check for saved session
+            const saved = localStorage.getItem('zrideDriver');
+            if (saved) {
+                try {
+                    currentUser = JSON.parse(saved);
+                    showApp();
+                } catch (e) {}
+            }
             
             const savedAvatar = localStorage.getItem('zrideAvatar');
             if (savedAvatar) {
@@ -999,6 +1179,11 @@ function playBirdSound() {
             startLocationTracking();
             requestWakeLock();
             setInterval(checkConnection, 30000);
+            
+            // Hide install button if already installed or not supported
+            if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+                document.getElementById('installBtn').style.display = 'none';
+            }
         });
 
         // =============================================
@@ -1009,6 +1194,20 @@ function playBirdSound() {
                 console.log('Connection lost, attempting to reconnect...');
                 connectToDispatch();
             }
+        }
+
+        // =============================================
+        // CALCULATE DISTANCE BETWEEN COORDINATES
+        // =============================================
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3959; // Miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
         }
 
         // =============================================
@@ -1135,7 +1334,7 @@ function playBirdSound() {
                     console.log('📦 NEW JOB from dispatch:', jobData);
                     if (!activeTrip) {
                         handleIncomingJob(jobData);
-                        playBirdSound();
+                        playLoudBirdSound(); // LOUD BIRD SOUND ALERT
                         clearTimeout(jobTimer);
                         jobTimer = setTimeout(() => {
                             if (currentJobAlert && currentJobAlert.id === jobData.id) {
@@ -1151,7 +1350,7 @@ function playBirdSound() {
                     console.log('🔄 REDISPATCH received:', jobData);
                     if (!activeTrip) {
                         handleIncomingJob(jobData);
-                        playBirdSound();
+                        playLoudBirdSound();
                     }
                 });
                 socket.on('cancel_approved', function(data) {
@@ -1168,7 +1367,7 @@ function playBirdSound() {
                 socket.on('dispatch_message', function(data) {
                     console.log('📨 Message from dispatch:', data);
                     addMessage({ text: data.text, sender: 'dispatch', timestamp: new Date().toISOString() });
-                    if (data.important) { playBirdSound(); }
+                    if (data.important) { playLoudBirdSound(); }
                 });
                 socket.on('commercial_ad', function(ad) {
                     console.log('Commercial ad:', ad);
@@ -1246,16 +1445,6 @@ function playBirdSound() {
             }
         }
 
-        function checkSavedSession() {
-            const saved = localStorage.getItem('zrideDriver');
-            if (saved) {
-                try {
-                    currentUser = JSON.parse(saved);
-                    showApp();
-                } catch (e) {}
-            }
-        }
-
         function showApp() {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
@@ -1283,125 +1472,115 @@ function playBirdSound() {
         }
 
         // =============================================
-        // JOB HANDLING
+        // JOB HANDLING - WITH DISTANCE DISPLAY
         // =============================================
-    function handleIncomingJob(jobData) {
-    if (activeTrip) return;
-    
-    // Calculate exact distance to pickup if coordinates provided
-    let distanceToPickup = jobData.distance || '2.5';
-    if (jobData.pickupLat && jobData.pickupLng && lastLocation) {
-        const calculated = calculateDistance(lastLocation.lat, lastLocation.lng, jobData.pickupLat, jobData.pickupLng);
-        distanceToPickup = calculated.toFixed(1);
-    }
-    
-    currentJobAlert = {
-        id: jobData.id,
-        customer: jobData.customer,
-        phone: jobData.phone || 'N/A',
-        pickup: jobData.pickup,
-        destination: jobData.destination,
-        distance: distanceToPickup,
-        fare: jobData.fare || 25.00,
-        autoPrice: jobData.autoPrice !== undefined ? jobData.autoPrice : autoPriceCalculation,
-        scheduledTime: jobData.scheduledTime,
-        accountType: jobData.accountType || 'Standard',
-        notes: jobData.notes || '',
-        callStatus: jobData.callStatus || 'New',
-        pickupLat: jobData.pickupLat,
-        pickupLng: jobData.pickupLng
-    };
-    
-    // Show distance in the alert
-    showJobAlert(currentJobAlert.distance);
-    addNotification(`New job: ${currentJobAlert.distance} miles to ${currentJobAlert.pickup}`);
-}
-  function showJobAlert(distance) {
-    document.getElementById('alertDistance').textContent = distance;
-    document.getElementById('jobAlert').classList.remove('hidden');
-    let timeLeft = 30;
-    const timer = setInterval(() => {
-        timeLeft--;
-        document.getElementById('alertTimer').textContent = timeLeft;
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            document.getElementById('jobAlert').classList.add('hidden');
-            if (socket && socket.connected && currentJobAlert) {
-                socket.emit('job_expired', { jobId: currentJobAlert.id, driverId: currentUser?.id });
-            }
-            currentJobAlert = null;
+        function handleIncomingJob(jobData) {
+            if (activeTrip) return;
+            
+            // Store distance to pickup
+            currentDistanceToPickup = parseFloat(jobData.distance) || 2.5;
+            
+            currentJobAlert = {
+                id: jobData.id,
+                customer: jobData.customer,
+                phone: jobData.phone || 'N/A',
+                pickup: jobData.pickup,
+                destination: jobData.destination,
+                distance: currentDistanceToPickup,
+                fare: jobData.fare || 25.00,
+                autoPrice: jobData.autoPrice !== undefined ? jobData.autoPrice : autoPriceCalculation,
+                scheduledTime: jobData.scheduledTime,
+                accountType: jobData.accountType || 'Standard',
+                notes: jobData.notes || '',
+                callStatus: jobData.callStatus || 'New'
+            };
+            
+            showJobAlert(currentDistanceToPickup, jobData.pickup);
+            addNotification(`New job: ${currentDistanceToPickup} miles to pickup at ${jobData.pickup}`);
         }
-    }, 1000);
-}
 
-function acceptJob() {
-    clearTimeout(jobTimer);
-    document.getElementById('jobAlert').classList.add('hidden');
-    if (!currentJobAlert) return;
-    console.log('🎯 Accepting job:', currentJobAlert);
-    
-    // Store pickup coordinates for navigation
-    window.pendingPickupLat = currentJobAlert.pickupLat;
-    window.pendingPickupLng = currentJobAlert.pickupLng;
-    window.pendingPickupAddress = currentJobAlert.pickup;
-    
-    socket.emit('job_accepted', {
-        jobId: currentJobAlert.id,
-        driverId: currentUser.id,
-        driverName: currentUser.name,
-        customer: currentJobAlert.customer,
-        phone: currentJobAlert.phone,
-        pickup: currentJobAlert.pickup,
-        destination: currentJobAlert.destination,
-        fare: currentJobAlert.fare,
-        scheduledTime: currentJobAlert.scheduledTime,
-        accountType: currentJobAlert.accountType,
-        notes: currentJobAlert.notes,
-        callStatus: currentJobAlert.callStatus,
-        location: { ...lastLocation, address: lastAddress },
-        timestamp: new Date().toISOString(),
-        pickupLat: currentJobAlert.pickupLat,
-        pickupLng: currentJobAlert.pickupLng
-    }, (ack) => {
-        if (ack && ack.success) {
-            activeTrip = {
-                id: currentJobAlert.id,
+        function showJobAlert(distance, pickupAddress) {
+            document.getElementById('alertDistance').textContent = distance.toFixed(1);
+            document.getElementById('alertPickupAddress').textContent = pickupAddress || 'Unknown location';
+            document.getElementById('jobAlert').classList.remove('hidden');
+            let timeLeft = 30;
+            const timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('alertTimer').textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    document.getElementById('jobAlert').classList.add('hidden');
+                    if (socket && socket.connected && currentJobAlert) {
+                        socket.emit('job_expired', { jobId: currentJobAlert.id, driverId: currentUser?.id });
+                    }
+                    currentJobAlert = null;
+                }
+            }, 1000);
+        }
+
+        function acceptJob() {
+            clearTimeout(jobTimer);
+            document.getElementById('jobAlert').classList.add('hidden');
+            if (!currentJobAlert) return;
+            console.log('🎯 Accepting job:', currentJobAlert);
+            socket.emit('job_accepted', {
+                jobId: currentJobAlert.id,
+                driverId: currentUser.id,
+                driverName: currentUser.name,
                 customer: currentJobAlert.customer,
                 phone: currentJobAlert.phone,
                 pickup: currentJobAlert.pickup,
                 destination: currentJobAlert.destination,
                 fare: currentJobAlert.fare,
-                autoPrice: currentJobAlert.autoPrice !== false,
-                stage: 'accepted',
-                cancelRequested: false,
+                distanceToPickup: currentDistanceToPickup,
                 scheduledTime: currentJobAlert.scheduledTime,
                 accountType: currentJobAlert.accountType,
                 notes: currentJobAlert.notes,
                 callStatus: currentJobAlert.callStatus,
-                storedFare: currentJobAlert.fare,
-                pickupLat: currentJobAlert.pickupLat,
-                pickupLng: currentJobAlert.pickupLng
-            };
-            console.log('✅ Active trip created:', activeTrip);
-            showActiveTripDetails();
-            addNotification(`Job accepted! Trip to ${activeTrip.destination}`);
-            switchPage('dashboard');
-            document.getElementById('navPickup').textContent = activeTrip.pickup;
-            document.getElementById('navDestination').textContent = activeTrip.destination;
-            document.getElementById('tripDestinationInfo').classList.remove('hidden');
-            
-            // AUTO NAVIGATION - Ask driver to navigate to pickup
-            setTimeout(() => {
-                if (confirm('🚗 Open Google Maps to navigate to pickup location?')) {
-                    navigateToPickup();
+                location: { ...lastLocation, address: lastAddress },
+                timestamp: new Date().toISOString()
+            }, (ack) => {
+                if (ack && ack.success) {
+                    activeTrip = {
+                        id: currentJobAlert.id,
+                        customer: currentJobAlert.customer,
+                        phone: currentJobAlert.phone,
+                        pickup: currentJobAlert.pickup,
+                        destination: currentJobAlert.destination,
+                        fare: currentJobAlert.fare,
+                        autoPrice: currentJobAlert.autoPrice !== false,
+                        stage: 'accepted',
+                        cancelRequested: false,
+                        scheduledTime: currentJobAlert.scheduledTime,
+                        accountType: currentJobAlert.accountType,
+                        notes: currentJobAlert.notes,
+                        callStatus: currentJobAlert.callStatus,
+                        storedFare: currentJobAlert.fare,
+                        distanceToPickup: currentDistanceToPickup
+                    };
+                    console.log('✅ Active trip created:', activeTrip);
+                    showActiveTripDetails();
+                    addNotification(`Job accepted! ${currentDistanceToPickup} miles to ${activeTrip.pickup}`);
+                    switchPage('dashboard');
+                    document.getElementById('navPickup').textContent = activeTrip.pickup;
+                    document.getElementById('navDestination').textContent = activeTrip.destination;
+                    document.getElementById('tripDestinationInfo').classList.remove('hidden');
+                    document.getElementById('pickupDistanceDisplay').innerHTML = `<span class="distance-badge"><i class="fas fa-map-pin"></i> ${currentDistanceToPickup.toFixed(1)} miles to pickup</span>`;
+                    
+                    // AUTO REROUTE TO PICKUP LOCATION - Opens Google Maps automatically
+                    setTimeout(() => {
+                        const autoNavigate = confirm(`Trip accepted! Open GPS to navigate to pickup (${currentDistanceToPickup.toFixed(1)} miles away)?`);
+                        if (autoNavigate) {
+                            navigateToPickup();
+                        }
+                    }, 500);
+                } else {
+                    alert('This job is no longer available');
                 }
-            }, 500);
-        } else {
-            alert('This job is no longer available');
+            });
+            currentJobAlert = null;
         }
-    });
-    currentJobAlert = null;
-}
+
         function showActiveTripDetails() {
             if (!activeTrip) return;
             console.log('📋 Showing trip details:', activeTrip);
@@ -1412,6 +1591,10 @@ function acceptJob() {
             document.getElementById('tripCustomerPhone').textContent = activeTrip.phone || 'N/A';
             document.getElementById('tripPickup').textContent = activeTrip.pickup || 'Not specified';
             document.getElementById('tripDestination').textContent = activeTrip.destination || 'Not specified';
+            
+            if (activeTrip.distanceToPickup) {
+                document.getElementById('tripDistanceDisplay').innerHTML = `<i class="fas fa-road"></i> ${activeTrip.distanceToPickup.toFixed(1)} mi to pickup`;
+            }
             
             const scheduledElem = document.getElementById('tripScheduledTime');
             if (scheduledElem && activeTrip.scheduledTime) {
@@ -1797,44 +1980,20 @@ function acceptJob() {
         function openWaze() {
             if (!activeTrip) { alert('No active trip'); return; }
             const dest = encodeURIComponent(activeTrip.destination + ', Nashville, TN');
-            window.open(`https://waze.com/ul?q=${dest}&navigate=yes`, '_system');
+            window.open(`https://waze.com/ul?q=${dest}&navigate=yes`, '_blank');
         }
 
         function openAppleMaps() {
             if (!activeTrip) { alert('No active trip'); return; }
             const dest = encodeURIComponent(activeTrip.destination + ', Nashville, TN');
-            window.open(`https://maps.apple.com/?daddr=${dest}&dirflg=d`, '_system');
+            window.open(`https://maps.apple.com/?daddr=${dest}&dirflg=d`, '_blank');
         }
 
         function openGoogleMaps() {
             if (!activeTrip) { alert('No active trip'); return; }
             const dest = encodeURIComponent(activeTrip.destination + ', Nashville, TN');
-            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, '_system');
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, '_blank');
         }
-
-// Navigate to pickup location
-function navigateToPickup() {
-    if (!activeTrip) {
-        alert('No active trip');
-        return;
-    }
-    
-    let destination = activeTrip.pickup;
-    // Use coordinates if available for more accurate navigation
-    if (activeTrip.pickupLat && activeTrip.pickupLng) {
-        destination = `${activeTrip.pickupLat},${activeTrip.pickupLng}`;
-    }
-    
-    const encodedDest = encodeURIComponent(destination + ', Nashville, TN');
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&travelmode=driving`;
-    
-    // Ask which app to use
-    const navChoice = confirm('Open Google Maps? (Cancel to use Waze/Apple Maps from MAP tab)');
-    if (navChoice) {
-        window.open(googleMapsUrl, '_blank');
-        addNotification('Opening Google Maps navigation');
-    }
-}
 
         // =============================================
         // COMMERCIAL ADS
@@ -1846,17 +2005,7 @@ function navigateToPickup() {
                 document.getElementById('adBanner').classList.add('hidden');
             }, (ad.duration || 30) * 1000);
         }
-       // Calculate distance between two coordinates in miles
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 3959; // Earth's radius in miles
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
+
         // =============================================
         // UTILITY FUNCTIONS
         // =============================================
@@ -1966,6 +2115,8 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
         window.sendMessage = sendMessage;
         window.handleMessageKeyPress = handleMessageKeyPress;
         window.refreshConnection = refreshConnection;
+        window.installApp = installApp;
+        window.navigateToPickup = navigateToPickup;
     </script>
 </body>
 </html>
