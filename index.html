@@ -33,6 +33,36 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Harlow+Solid+Italic&display=swap">
     
     <style>
+
+
+// PWA Installation
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    // Show install button in header
+    const installBtn = document.createElement('div');
+    installBtn.id = 'installAppBtn';
+    installBtn.innerHTML = '<i class="fas fa-download"></i>';
+    installBtn.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#f97316;width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;z-index:1000;box-shadow:0 4px 15px rgba(0,0,0,0.3);cursor:pointer;';
+    installBtn.onclick = () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(() => {
+                deferredPrompt = null;
+                installBtn.remove();
+            });
+        } else {
+            alert('📱 To install: Tap Share → Add to Home Screen (Safari) or Menu → Install App (Chrome)');
+        }
+    };
+    document.body.appendChild(installBtn);
+});
+
+// Check if already installed
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    document.getElementById('installAppBtn')?.remove();
+}
         /* ===== RESET & VARIABLES ===== */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         
@@ -740,48 +770,45 @@
             }, 100);
         }
 
-        function playBirdSound() {
-            console.log('🐦 Playing bird sound');
-            
-            const bird = document.createElement('div');
-            bird.innerHTML = '🐦';
-            bird.style.cssText = 'position:fixed;top:20%;left:50%;transform:translate(-50%,-50%);font-size:4rem;z-index:10001;animation:flyAway 1s ease-out forwards;';
-            if (!document.querySelector('#flyAnimation')) {
-                const style = document.createElement('style');
-                style.textContent = '@keyframes flyAway{0%{opacity:1;}100%{opacity:0;transform:translate(100%,-200%);}}';
-                document.head.appendChild(style);
-            }
-            document.body.appendChild(bird);
-            setTimeout(() => bird.remove(), 1000);
-            
-            if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
-            
-            if (birdAudio) {
-                birdAudio.currentTime = 0;
-                birdAudio.play().catch(e => console.log('Audio error:', e));
-            }
-            
-            if (Notification.permission === 'granted') {
-                new Notification('🚕 New Job Available!', {
-                    body: 'A new trip is waiting for you',
-                    icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23e67e22\'/%3E%3Ctext x=\'50\' y=\'70\' text-anchor=\'middle\' fill=\'white\' font-size=\'50\'%3E🚕%3C/text%3E%3C/svg%3E'
-                });
-            }
-        }
 
-        function playMeterSound() {
-            if (meterAudio) {
-                meterAudio.currentTime = 0;
-                meterAudio.play().catch(() => {});
-            }
-        }
-
-        function playWaitingSound() {
-            if (waitingAudio) {
-                waitingAudio.currentTime = 0;
-                waitingAudio.play().catch(() => {});
-            }
-        }
+function playBirdSound() {
+    console.log('🐦 Playing bird sound');
+    
+    // Visual flying bird animation
+    const bird = document.createElement('div');
+    bird.innerHTML = '🐦';
+    bird.style.cssText = 'position:fixed;top:20%;left:50%;transform:translate(-50%,-50%);font-size:5rem;z-index:10001;animation:flyAway 1s ease-out forwards;';
+    if (!document.querySelector('#flyAnimation')) {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes flyAway{0%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;transform:translate(100%,-200%) scale(2);}}';
+        document.head.appendChild(style);
+    }
+    document.body.appendChild(bird);
+    setTimeout(() => bird.remove(), 1000);
+    
+    // Strong vibration
+    if (navigator.vibrate) navigator.vibrate([500, 200, 500]);
+    
+    // LOUD bird sound
+    if (birdAudio) {
+        birdAudio.currentTime = 0;
+        birdAudio.volume = 1.0;
+        birdAudio.play().catch(e => console.log('Audio error:', e));
+    }
+    
+    // Also play a backup beep for extra alert
+    const beep = new Audio();
+    beep.src = 'https://www.soundjay.com/misc/sounds/beep-07.mp3';
+    beep.volume = 0.8;
+    beep.play().catch(() => {});
+    
+    if (Notification.permission === 'granted') {
+        new Notification('🚕 New Job Available!', {
+            body: `${currentJobAlert?.distance || 'A new'} mile trip is waiting for you`,
+            icon: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'45\' fill=\'%23e67e22\'/%3E%3Ctext x=\'50\' y=\'70\' text-anchor=\'middle\' fill=\'white\' font-size=\'50\'%3E🚕%3C/text%3E%3C/svg%3E'
+        });
+    }
+}
 
         // =============================================
         // ADD ACTIVITY FUNCTION
@@ -1258,98 +1285,123 @@
         // =============================================
         // JOB HANDLING
         // =============================================
-        function handleIncomingJob(jobData) {
-            if (activeTrip) return;
-            
-            currentJobAlert = {
-                id: jobData.id,
-                customer: jobData.customer,
-                phone: jobData.phone || 'N/A',
-                pickup: jobData.pickup,
-                destination: jobData.destination,
-                distance: jobData.distance || '2.5',
-                fare: jobData.fare || 25.00,
-                autoPrice: jobData.autoPrice !== undefined ? jobData.autoPrice : autoPriceCalculation,
-                scheduledTime: jobData.scheduledTime,
-                accountType: jobData.accountType || 'Standard',
-                notes: jobData.notes || '',
-                callStatus: jobData.callStatus || 'New'
-            };
-            
-            showJobAlert(currentJobAlert.distance);
-            addNotification(`New job: ${currentJobAlert.distance} miles to ${currentJobAlert.pickup}`);
-        }
-
-        function showJobAlert(distance) {
-            document.getElementById('alertDistance').textContent = distance;
-            document.getElementById('jobAlert').classList.remove('hidden');
-            let timeLeft = 30;
-            const timer = setInterval(() => {
-                timeLeft--;
-                document.getElementById('alertTimer').textContent = timeLeft;
-                if (timeLeft <= 0) {
-                    clearInterval(timer);
-                    document.getElementById('jobAlert').classList.add('hidden');
-                    if (socket && socket.connected && currentJobAlert) {
-                        socket.emit('job_expired', { jobId: currentJobAlert.id, driverId: currentUser?.id });
-                    }
-                    currentJobAlert = null;
-                }
-            }, 1000);
-        }
-
-        function acceptJob() {
-            clearTimeout(jobTimer);
+    function handleIncomingJob(jobData) {
+    if (activeTrip) return;
+    
+    // Calculate exact distance to pickup if coordinates provided
+    let distanceToPickup = jobData.distance || '2.5';
+    if (jobData.pickupLat && jobData.pickupLng && lastLocation) {
+        const calculated = calculateDistance(lastLocation.lat, lastLocation.lng, jobData.pickupLat, jobData.pickupLng);
+        distanceToPickup = calculated.toFixed(1);
+    }
+    
+    currentJobAlert = {
+        id: jobData.id,
+        customer: jobData.customer,
+        phone: jobData.phone || 'N/A',
+        pickup: jobData.pickup,
+        destination: jobData.destination,
+        distance: distanceToPickup,
+        fare: jobData.fare || 25.00,
+        autoPrice: jobData.autoPrice !== undefined ? jobData.autoPrice : autoPriceCalculation,
+        scheduledTime: jobData.scheduledTime,
+        accountType: jobData.accountType || 'Standard',
+        notes: jobData.notes || '',
+        callStatus: jobData.callStatus || 'New',
+        pickupLat: jobData.pickupLat,
+        pickupLng: jobData.pickupLng
+    };
+    
+    // Show distance in the alert
+    showJobAlert(currentJobAlert.distance);
+    addNotification(`New job: ${currentJobAlert.distance} miles to ${currentJobAlert.pickup}`);
+}
+  function showJobAlert(distance) {
+    document.getElementById('alertDistance').textContent = distance;
+    document.getElementById('jobAlert').classList.remove('hidden');
+    let timeLeft = 30;
+    const timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById('alertTimer').textContent = timeLeft;
+        if (timeLeft <= 0) {
+            clearInterval(timer);
             document.getElementById('jobAlert').classList.add('hidden');
-            if (!currentJobAlert) return;
-            console.log('🎯 Accepting job:', currentJobAlert);
-            socket.emit('job_accepted', {
-                jobId: currentJobAlert.id,
-                driverId: currentUser.id,
-                driverName: currentUser.name,
+            if (socket && socket.connected && currentJobAlert) {
+                socket.emit('job_expired', { jobId: currentJobAlert.id, driverId: currentUser?.id });
+            }
+            currentJobAlert = null;
+        }
+    }, 1000);
+}
+
+function acceptJob() {
+    clearTimeout(jobTimer);
+    document.getElementById('jobAlert').classList.add('hidden');
+    if (!currentJobAlert) return;
+    console.log('🎯 Accepting job:', currentJobAlert);
+    
+    // Store pickup coordinates for navigation
+    window.pendingPickupLat = currentJobAlert.pickupLat;
+    window.pendingPickupLng = currentJobAlert.pickupLng;
+    window.pendingPickupAddress = currentJobAlert.pickup;
+    
+    socket.emit('job_accepted', {
+        jobId: currentJobAlert.id,
+        driverId: currentUser.id,
+        driverName: currentUser.name,
+        customer: currentJobAlert.customer,
+        phone: currentJobAlert.phone,
+        pickup: currentJobAlert.pickup,
+        destination: currentJobAlert.destination,
+        fare: currentJobAlert.fare,
+        scheduledTime: currentJobAlert.scheduledTime,
+        accountType: currentJobAlert.accountType,
+        notes: currentJobAlert.notes,
+        callStatus: currentJobAlert.callStatus,
+        location: { ...lastLocation, address: lastAddress },
+        timestamp: new Date().toISOString(),
+        pickupLat: currentJobAlert.pickupLat,
+        pickupLng: currentJobAlert.pickupLng
+    }, (ack) => {
+        if (ack && ack.success) {
+            activeTrip = {
+                id: currentJobAlert.id,
                 customer: currentJobAlert.customer,
                 phone: currentJobAlert.phone,
                 pickup: currentJobAlert.pickup,
                 destination: currentJobAlert.destination,
                 fare: currentJobAlert.fare,
+                autoPrice: currentJobAlert.autoPrice !== false,
+                stage: 'accepted',
+                cancelRequested: false,
                 scheduledTime: currentJobAlert.scheduledTime,
                 accountType: currentJobAlert.accountType,
                 notes: currentJobAlert.notes,
                 callStatus: currentJobAlert.callStatus,
-                location: { ...lastLocation, address: lastAddress },
-                timestamp: new Date().toISOString()
-            }, (ack) => {
-                if (ack && ack.success) {
-                    activeTrip = {
-                        id: currentJobAlert.id,
-                        customer: currentJobAlert.customer,
-                        phone: currentJobAlert.phone,
-                        pickup: currentJobAlert.pickup,
-                        destination: currentJobAlert.destination,
-                        fare: currentJobAlert.fare,
-                        autoPrice: currentJobAlert.autoPrice !== false,
-                        stage: 'accepted',
-                        cancelRequested: false,
-                        scheduledTime: currentJobAlert.scheduledTime,
-                        accountType: currentJobAlert.accountType,
-                        notes: currentJobAlert.notes,
-                        callStatus: currentJobAlert.callStatus,
-                        storedFare: currentJobAlert.fare
-                    };
-                    console.log('✅ Active trip created:', activeTrip);
-                    showActiveTripDetails();
-                    addNotification(`Job accepted! Trip to ${activeTrip.destination}`);
-                    switchPage('dashboard');
-                    document.getElementById('navPickup').textContent = activeTrip.pickup;
-                    document.getElementById('navDestination').textContent = activeTrip.destination;
-                    document.getElementById('tripDestinationInfo').classList.remove('hidden');
-                } else {
-                    alert('This job is no longer available');
+                storedFare: currentJobAlert.fare,
+                pickupLat: currentJobAlert.pickupLat,
+                pickupLng: currentJobAlert.pickupLng
+            };
+            console.log('✅ Active trip created:', activeTrip);
+            showActiveTripDetails();
+            addNotification(`Job accepted! Trip to ${activeTrip.destination}`);
+            switchPage('dashboard');
+            document.getElementById('navPickup').textContent = activeTrip.pickup;
+            document.getElementById('navDestination').textContent = activeTrip.destination;
+            document.getElementById('tripDestinationInfo').classList.remove('hidden');
+            
+            // AUTO NAVIGATION - Ask driver to navigate to pickup
+            setTimeout(() => {
+                if (confirm('🚗 Open Google Maps to navigate to pickup location?')) {
+                    navigateToPickup();
                 }
-            });
-            currentJobAlert = null;
+            }, 500);
+        } else {
+            alert('This job is no longer available');
         }
-
+    });
+    currentJobAlert = null;
+}
         function showActiveTripDetails() {
             if (!activeTrip) return;
             console.log('📋 Showing trip details:', activeTrip);
@@ -1760,6 +1812,30 @@
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${dest}&travelmode=driving`, '_system');
         }
 
+// Navigate to pickup location
+function navigateToPickup() {
+    if (!activeTrip) {
+        alert('No active trip');
+        return;
+    }
+    
+    let destination = activeTrip.pickup;
+    // Use coordinates if available for more accurate navigation
+    if (activeTrip.pickupLat && activeTrip.pickupLng) {
+        destination = `${activeTrip.pickupLat},${activeTrip.pickupLng}`;
+    }
+    
+    const encodedDest = encodeURIComponent(destination + ', Nashville, TN');
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodedDest}&travelmode=driving`;
+    
+    // Ask which app to use
+    const navChoice = confirm('Open Google Maps? (Cancel to use Waze/Apple Maps from MAP tab)');
+    if (navChoice) {
+        window.open(googleMapsUrl, '_blank');
+        addNotification('Opening Google Maps navigation');
+    }
+}
+
         // =============================================
         // COMMERCIAL ADS
         // =============================================
@@ -1770,7 +1846,17 @@
                 document.getElementById('adBanner').classList.add('hidden');
             }, (ad.duration || 30) * 1000);
         }
-
+       // Calculate distance between two coordinates in miles
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 3959; // Earth's radius in miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
         // =============================================
         // UTILITY FUNCTIONS
         // =============================================
